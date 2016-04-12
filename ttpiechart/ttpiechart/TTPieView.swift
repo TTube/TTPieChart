@@ -11,6 +11,7 @@ import UIKit
 
 typealias pieMaker = (Sector, Int) -> TTSectorLayer?
 typealias reusePieLayer = Int -> TTSectorLayer?
+typealias brighterColor = CGFloat -> UIColor
 
 enum TTPieDirection {
     case Normal
@@ -81,6 +82,7 @@ func getPieMaker (startAngle : Double, direction : TTPieDirection, reuseList : r
         }else {
             pie?.strokeColor =  sector.fillColor!.CGColor
         }
+        pie?.sector = sector
         return pie
         
     }
@@ -190,6 +192,7 @@ class TTPieView: UIView {
             let path = UIBezierPath.init(CGPath: pieLayer.path!)
             if path.containsPoint(touchPoint!) {
                 pieLayer.setAffineTransform(CGAffineTransformMakeScale(CGFloat(1.2), CGFloat(1.2)))
+                pieLayer.fillColor = UIColor.init(CGColor: pieLayer.fillColor!).brinessColor()(0.3).CGColor
             }
         }
     }
@@ -198,6 +201,7 @@ class TTPieView: UIView {
         super.touchesEnded(touches, withEvent: event)
             for pieLayer in self.reusePiesList {
                 pieLayer.setAffineTransform(CGAffineTransformIdentity)
+                pieLayer.fillColor = pieLayer.sector?.fillColor?.CGColor
             }
     }
     
@@ -205,6 +209,25 @@ class TTPieView: UIView {
         super.touchesCancelled(touches, withEvent: event)
         for pieLayer in self.reusePiesList {
             pieLayer.setAffineTransform(CGAffineTransformIdentity)
+            pieLayer.fillColor = pieLayer.sector?.fillColor?.CGColor
         }
     }
 }
+
+
+
+
+extension UIColor {
+    func brinessColor() -> brighterColor {
+        var hue : CGFloat = 0, saturation : CGFloat = 0, brightness : CGFloat = 0, alpha : CGFloat = 0
+        self.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
+        
+        return { lighterOffset in
+            brightness += lighterOffset
+            saturation -= 0.2
+           return UIColor.init(hue: hue, saturation: saturation, brightness: brightness, alpha: alpha)
+        }
+    }
+}
+
+

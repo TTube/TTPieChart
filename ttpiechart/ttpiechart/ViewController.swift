@@ -71,8 +71,8 @@ extension ViewController : TTPieViewDelegate {
             [0.8, 1.0]
         ]
         var sector = Sector()
-        sector.minRadius = 80.0
-        sector.maxRadius = 200.0
+        sector.minRadius = 60.0
+        sector.maxRadius = 160.0
         sector.fillColor = self.randomColor()
         sector.startPercent = percentArr[index][0]
         sector.endPercent = percentArr[index][1]

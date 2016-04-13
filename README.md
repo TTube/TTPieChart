@@ -9,15 +9,15 @@
  
 
 ``` swift
-   func numberOfSectorInPieView(_ : _) -> Int
-   func pieView(_ : _, sectorModelForIndex _ : _) -> Sector
+    numberOfSectorInPieView(_ : _) -> Int
+    pieView(_ : _, sectorModelForIndex _ : _) -> Sector
 
 ```
 
 + 响应触摸则需要响应一下两个方法
 
 ``` swift
-    func pieView(pieView : TTPieView, didClickPieLayer layer : TTSectorLayer, atPoint point : CGPoint) -> Void
-    func pieView(pieView : TTPieView, didUnClickPieLayer layer : TTSectorLayer) -> Void
+     pieView(_: _, didClickPieLayer _ : _, atPoint _ : _) -> Void
+     pieView(_ : _, didUnClickPieLayer _ : _) -> Void
 
 ```

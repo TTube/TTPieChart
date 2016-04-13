@@ -9,8 +9,10 @@
 import Foundation
 import UIKit
 
-typealias pieMaker = (Sector, Int) -> TTSectorLayer?
-typealias reusePieLayer = Int -> TTSectorLayer?
+infix operator +  { associativity right precedence 110 }
+
+typealias chartMaker = CALayer -> CALayer?
+typealias reusePieLayer = Int -> CALayer?
 typealias brighterColor = CGFloat -> UIColor
 
 enum TTPieDirection {
@@ -31,27 +33,22 @@ struct Sector {
     var fillColor : UIColor?
 }
 
-
 /*
- getPieMaker get the pie maker to make sectorLayer with sector
+ + get the pie maker to make sectorLayer with sector
  @param startAngle: the pie startAngle
  @param direction: the pie direction
- @param reuseList:  the method to get reuse sectorLayer with index
- @param pieView: the sectorLayer's container
+ @param center: the center of sectorLayer's container
  */
-func getPieMaker (startAngle : Double, direction : TTPieDirection, reuseList : reusePieLayer, pieView : TTPieView) -> pieMaker {
-    return {
-        sector , index  in
-        //Get reusePieList
-        let pie = reuseList(index)
-        //check if sector is legal
-        guard sector.minRadius < sector.maxRadius || sector.minRadius >= 0 || sector.maxRadius >= 0 else {return pie }
-        //Get the sector center with the offset
+func + (sector : Sector, pieView :TTPieView) -> chartMaker {
+    return { layer in
+        guard let pie = layer as? TTSectorLayer
+            where (sector.minRadius < sector.maxRadius || sector.minRadius >= 0 || sector.maxRadius >= 0)
+            else { return layer }
         let pieCenter = CGPoint.init(x: pieView.center.x + sector.centerOffset.x, y: pieView.center.y + sector.centerOffset.y)
         let sectorPath = UIBezierPath()
         //Get the sector startAngle and endAngle from sector's startPercent and endPercent
-        let startAngle = pieView.startAngle + (sector.startPercent * M_PI * 2) * (direction == TTPieDirection.Normal ? 1 : -1);
-        let endAngle = pieView.startAngle + (sector.endPercent * M_PI * 2) * (direction == TTPieDirection.Normal ? 1 : -1);
+        let startAngle = pieView.startAngle + (sector.startPercent * M_PI * 2) * (pieView.direction == TTPieDirection.Normal ? 1 : -1);
+        let endAngle = pieView.startAngle + (sector.endPercent * M_PI * 2) * (pieView.direction == TTPieDirection.Normal ? 1 : -1);
         //Get startPoint,endPoint to draw the path
         let startInnerPoint = CGPoint.init(x: CGFloat(sector.minRadius * cos(startAngle) + Double(pieCenter.x)), y: CGFloat(sector.minRadius * sin(startAngle) + Double(pieCenter.y)))
         let endOutterPoint = CGPoint.init(x: CGFloat(sector.maxRadius * cos(endAngle) + Double(pieCenter.x)), y: CGFloat(sector.maxRadius * sin(endAngle) + Double(pieCenter.y)))
@@ -59,34 +56,37 @@ func getPieMaker (startAngle : Double, direction : TTPieDirection, reuseList : r
         //Begin to draw the path
         if sector.minRadius > 0 {
             sectorPath.moveToPoint(startInnerPoint)
-            sectorPath.addArcWithCenter(pieCenter, radius: CGFloat(sector.minRadius), startAngle: CGFloat(startAngle), endAngle: CGFloat(endAngle), clockwise: direction == .Normal)
+            sectorPath.addArcWithCenter(pieCenter, radius: CGFloat(sector.minRadius), startAngle: CGFloat(startAngle), endAngle: CGFloat(endAngle), clockwise: pieView.direction == .Normal)
             sectorPath.addLineToPoint(endOutterPoint);
-            sectorPath.addArcWithCenter(pieCenter, radius: CGFloat(sector.maxRadius), startAngle: CGFloat(endAngle), endAngle: CGFloat(startAngle), clockwise: direction != .Normal)
+            sectorPath.addArcWithCenter(pieCenter, radius: CGFloat(sector.maxRadius), startAngle: CGFloat(endAngle), endAngle: CGFloat(startAngle), clockwise: pieView.direction != .Normal)
             
         }else {
             sectorPath.moveToPoint(pieCenter)
             sectorPath.addLineToPoint(endOutterPoint)
-            sectorPath.addArcWithCenter(pieCenter, radius: CGFloat(sector.maxRadius), startAngle: CGFloat(endAngle), endAngle: CGFloat(startAngle), clockwise: direction != .Normal)
+            sectorPath.addArcWithCenter(pieCenter, radius: CGFloat(sector.maxRadius), startAngle: CGFloat(endAngle), endAngle: CGFloat(startAngle), clockwise: pieView.direction != .Normal)
             sectorPath.addLineToPoint(pieCenter)
         }
         //draw end
         sectorPath.closePath()
-        pie?.path = sectorPath.CGPath
+        pie.path = sectorPath.CGPath
         if let fillColor = sector.fillColor {
-            pie?.fillColor = fillColor.CGColor
+            pie.fillColor = fillColor.CGColor
         }else {
-            pie?.fillColor = nil
+            pie.fillColor = nil
         }
         if let borderColor = sector.borderColor {
-            pie?.strokeColor = borderColor.CGColor
+            pie.strokeColor = borderColor.CGColor
         }else {
-            pie?.strokeColor =  sector.fillColor!.CGColor
+            pie.strokeColor =  nil
         }
-        pie?.sector = sector
+        pie.sector = sector
+        pieView.layer.addSublayer(pie)
         return pie
-        
     }
 }
+
+
+
 
 protocol TTPieViewDelegate : NSObjectProtocol {
 
@@ -100,24 +100,12 @@ class TTSectorLayer: CAShapeLayer {
 
 class TTPieView: UIView {
     weak var delegate : TTPieViewDelegate?
-    var currentPieMaker : pieMaker?
     var didLayoutFirst = false
     
     var  currentSectorNum : Int = 0
     
-    
-    var startAngle = 0.0 {
-        didSet{
-            print("\(self.classForCoder) didSet StartAngle")
-            currentPieMaker = getPieMaker(startAngle, direction: self.direction, reuseList: reusePieLayerGetter!, pieView: self)
-        }
-    }
-    var direction : TTPieDirection = .Normal {
-        didSet {
-            print("\(self.classForCoder) didSet direction")
-            currentPieMaker = getPieMaker(startAngle, direction: self.direction, reuseList: reusePieLayerGetter!, pieView: self)
-        }
-    }
+    var startAngle = 0.0
+    var direction : TTPieDirection = .Normal
     
     lazy var reusePieLayerGetter : reusePieLayer? = {
         let reusePieLayerGetter : reusePieLayer = { [weak self]
@@ -154,7 +142,6 @@ class TTPieView: UIView {
     override func layoutSubviews() {
         super.layoutSubviews()
         if (self.frame.size.width > 0) && !self.didLayoutFirst {
-            currentPieMaker = getPieMaker(startAngle, direction: self.direction, reuseList: reusePieLayerGetter!, pieView: self)
             self .reloadView()
             didLayoutFirst = true
         }
@@ -174,14 +161,10 @@ class TTPieView: UIView {
             self.reusePiesList = newReuseList
         }
         for index in 0..<(numberOfPie!) {
-            if  let sector = self.delegate?.pieView(self, sectorModelForIndex: index){
-                if let pieMaker = currentPieMaker {
-                    if  let  layer = pieMaker(sector, index){
-                        layer.frame = self.bounds
-                        self.layer.addSublayer(layer)
-                    }
-                }
+            guard let sector = self.delegate?.pieView(self, sectorModelForIndex: index) , let reuseLayer = self.reusePieLayerGetter?(index)  else {
+                continue
             }
+            (sector + self)(reuseLayer)
         }
     }
     
@@ -197,6 +180,24 @@ class TTPieView: UIView {
         }
     }
  
+    override func touchesMoved(touches: Set<UITouch>, withEvent event: UIEvent?) {
+        super.touchesMoved(touches, withEvent: event)
+         let touchPoint = touches.first?.locationInView(self)
+        for pieLayer in self.reusePiesList {
+            let path = UIBezierPath.init(CGPath: pieLayer.path!)
+            if path.containsPoint(touchPoint!) {
+                pieLayer.setAffineTransform(CGAffineTransformMakeScale(CGFloat(1.2), CGFloat(1.2)))
+                if let pieFillColor = pieLayer.sector?.fillColor {
+                    pieLayer.fillColor = pieFillColor.brinessColor()(0.3).CGColor
+                }
+                
+            }else {
+                pieLayer.setAffineTransform(CGAffineTransformIdentity)
+                pieLayer.fillColor = pieLayer.sector?.fillColor?.CGColor
+            }
+        }
+    }
+    
     override func touchesEnded(touches: Set<UITouch>, withEvent event: UIEvent?) {
         super.touchesEnded(touches, withEvent: event)
             for pieLayer in self.reusePiesList {

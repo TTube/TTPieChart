@@ -5,7 +5,7 @@
 
 ## UseAge
 
-+ 在dataSource 响应两个方法
++ 如果你需要展示你的饼图，你需要在dataSource 响应两个方法
  
 
 ``` swift
@@ -14,7 +14,7 @@
 
 ```
 
-+ 响应触摸则需要响应一下两个方法
++ 响应触摸则需要响应以下两个方法
 
 ``` swift
      pieView(_: _, didClickPieLayer _ : _, atPoint _ : _) -> Void

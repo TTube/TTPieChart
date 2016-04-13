@@ -25,6 +25,7 @@ class ViewController: UIViewController  {
         let pieView = TTPieView.init(frame: self.view.frame)
         pieView.backgroundColor = UIColor.whiteColor()
         pieView.delegate = self
+        pieView.dataSource = self
         pieView.startAngle = -M_PI_2
         self.view.addSubview(pieView)
         self.pieView = pieView
@@ -49,7 +50,7 @@ class ViewController: UIViewController  {
     }
 }
 
-extension ViewController : TTPieViewDelegate {
+extension ViewController : TTPieViewDataSource, TTPieViewDelegate {
     func numberOfSectorInPieView(pieView: TTPieView) -> Int {
         return Int(arc4random() % 6) + 1
     }
@@ -78,4 +79,16 @@ extension ViewController : TTPieViewDelegate {
         sector.endPercent = percentArr[index][1]
         return sector
     }
+    
+    func pieView(pieView: TTPieView, didClickPieLayer layer: TTSectorLayer) {
+            layer.setAffineTransform(CGAffineTransformMakeScale(CGFloat(1.2), CGFloat(1.2)))
+            layer.fillColor = layer.sector?.fillColor?.brinessColor()(0.3).CGColor
+    }
+    
+    func pieView(pieView: TTPieView, didUnClickPieLayer layer: TTSectorLayer) {
+        layer.setAffineTransform(CGAffineTransformIdentity)
+        layer.fillColor = layer.sector?.fillColor?.CGColor
+    }
+    
+    
 }

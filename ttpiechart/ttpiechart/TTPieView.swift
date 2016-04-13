@@ -34,12 +34,12 @@ struct Sector {
 }
 
 /*
- + get the pie maker to make sectorLayer with sector
+ + get the chartMaker maker to make sectorLayer with sector
  @param startAngle: the pie startAngle
  @param direction: the pie direction
  @param center: the center of sectorLayer's container
  */
-func + (sector : Sector, pieView :TTPieView) -> chartMaker {
+private func + (sector : Sector, pieView :TTPieView) -> chartMaker {
     return { layer in
         guard let pie = layer as? TTSectorLayer
             where (sector.minRadius < sector.maxRadius || sector.minRadius >= 0 || sector.maxRadius >= 0)
@@ -80,6 +80,7 @@ func + (sector : Sector, pieView :TTPieView) -> chartMaker {
             pie.strokeColor =  nil
         }
         pie.sector = sector
+        pie.frame = pieView.bounds
         pieView.layer.addSublayer(pie)
         return pie
     }
@@ -88,10 +89,14 @@ func + (sector : Sector, pieView :TTPieView) -> chartMaker {
 
 
 
-protocol TTPieViewDelegate : NSObjectProtocol {
-
+ protocol TTPieViewDataSource : NSObjectProtocol {
    func numberOfSectorInPieView(pieView : TTPieView) -> Int
-    func pieView(pieView : TTPieView, sectorModelForIndex index : Int) -> Sector
+   func pieView(pieView : TTPieView, sectorModelForIndex index : Int) -> Sector
+}
+
+protocol TTPieViewDelegate : NSObjectProtocol {
+    func pieView(pieView : TTPieView, didClickPieLayer layer : TTSectorLayer) -> Void
+    func pieView(pieView : TTPieView, didUnClickPieLayer layer : TTSectorLayer) -> Void
 }
 
 class TTSectorLayer: CAShapeLayer {
@@ -99,6 +104,7 @@ class TTSectorLayer: CAShapeLayer {
 }
 
 class TTPieView: UIView {
+    weak var dataSource : TTPieViewDataSource?
     weak var delegate : TTPieViewDelegate?
     var didLayoutFirst = false
     
@@ -151,17 +157,17 @@ class TTPieView: UIView {
         for pieLayer in self.reusePiesList {
             pieLayer.removeFromSuperlayer()
         }
-        let numberOfPie = self.delegate?.numberOfSectorInPieView(self)
-        if numberOfPie < self.currentSectorNum  {
+        let numberOfPie = dataSource?.numberOfSectorInPieView(self)
+        if numberOfPie < currentSectorNum  {
             //clear reuse sector
             var newReuseList : Array <TTSectorLayer>  = []
             for index in 0...(numberOfPie!-1) {
-                newReuseList.append(self.reusePiesList[index])
+                newReuseList.append(reusePiesList[index])
             }
             self.reusePiesList = newReuseList
         }
         for index in 0..<(numberOfPie!) {
-            guard let sector = self.delegate?.pieView(self, sectorModelForIndex: index) , let reuseLayer = self.reusePieLayerGetter?(index)  else {
+            guard let sector = self.dataSource?.pieView(self, sectorModelForIndex: index) , let reuseLayer = self.reusePieLayerGetter?(index)  else {
                 continue
             }
             (sector + self)(reuseLayer)
@@ -174,8 +180,8 @@ class TTPieView: UIView {
         for pieLayer in self.reusePiesList {
             let path = UIBezierPath.init(CGPath: pieLayer.path!)
             if path.containsPoint(touchPoint!) {
-                pieLayer.setAffineTransform(CGAffineTransformMakeScale(CGFloat(1.2), CGFloat(1.2)))
-                pieLayer.fillColor = UIColor.init(CGColor: pieLayer.fillColor!).brinessColor()(0.3).CGColor
+                self.delegate?.pieView(self, didClickPieLayer: pieLayer)
+                break
             }
         }
     }
@@ -186,14 +192,9 @@ class TTPieView: UIView {
         for pieLayer in self.reusePiesList {
             let path = UIBezierPath.init(CGPath: pieLayer.path!)
             if path.containsPoint(touchPoint!) {
-                pieLayer.setAffineTransform(CGAffineTransformMakeScale(CGFloat(1.2), CGFloat(1.2)))
-                if let pieFillColor = pieLayer.sector?.fillColor {
-                    pieLayer.fillColor = pieFillColor.brinessColor()(0.3).CGColor
-                }
-                
+                self.delegate?.pieView(self, didClickPieLayer: pieLayer)
             }else {
-                pieLayer.setAffineTransform(CGAffineTransformIdentity)
-                pieLayer.fillColor = pieLayer.sector?.fillColor?.CGColor
+                self.delegate?.pieView(self, didUnClickPieLayer: pieLayer)
             }
         }
     }
@@ -201,16 +202,14 @@ class TTPieView: UIView {
     override func touchesEnded(touches: Set<UITouch>, withEvent event: UIEvent?) {
         super.touchesEnded(touches, withEvent: event)
             for pieLayer in self.reusePiesList {
-                pieLayer.setAffineTransform(CGAffineTransformIdentity)
-                pieLayer.fillColor = pieLayer.sector?.fillColor?.CGColor
+                self.delegate?.pieView(self, didUnClickPieLayer: pieLayer)
             }
     }
     
     override func touchesCancelled(touches: Set<UITouch>?, withEvent event: UIEvent?) {
         super.touchesCancelled(touches, withEvent: event)
         for pieLayer in self.reusePiesList {
-            pieLayer.setAffineTransform(CGAffineTransformIdentity)
-            pieLayer.fillColor = pieLayer.sector?.fillColor?.CGColor
+            self.delegate?.pieView(self, didUnClickPieLayer: pieLayer)
         }
     }
 }

@@ -44,7 +44,7 @@ private func + (sector : Sector, pieView :TTPieView) -> chartMaker {
         guard let pie = layer as? TTSectorLayer
             where (sector.minRadius < sector.maxRadius || sector.minRadius >= 0 || sector.maxRadius >= 0)
             else { return layer }
-        let pieCenter = CGPoint.init(x: pieView.center.x + sector.centerOffset.x, y: pieView.center.y + sector.centerOffset.y)
+        let pieCenter = CGPoint.init(x: pieView.frame.size.width / 2.0 + sector.centerOffset.x, y: pieView.frame.size.height / 2.0 + sector.centerOffset.y)
         let sectorPath = UIBezierPath()
         //Get the sector startAngle and endAngle from sector's startPercent and endPercent
         let startAngle = pieView.startAngle + (sector.startPercent * M_PI * 2) * (pieView.direction == TTPieDirection.Normal ? 1 : -1);
@@ -95,24 +95,29 @@ private func + (sector : Sector, pieView :TTPieView) -> chartMaker {
 }
 
 protocol TTPieViewDelegate : NSObjectProtocol {
-    func pieView(pieView : TTPieView, didClickPieLayer layer : TTSectorLayer) -> Void
+    
+    func pieView(pieView : TTPieView, didClickPieLayer layer : TTSectorLayer, atPoint point : CGPoint) -> Void
     func pieView(pieView : TTPieView, didUnClickPieLayer layer : TTSectorLayer) -> Void
 }
 
 class TTSectorLayer: CAShapeLayer {
     var sector : Sector?
+    
 }
+
+
 
 class TTPieView: UIView {
     weak var dataSource : TTPieViewDataSource?
     weak var delegate : TTPieViewDelegate?
-    var didLayoutFirst = false
+    private var oldRect = CGRect.zero
     
     var  currentSectorNum : Int = 0
     
     var startAngle = 0.0
     var direction : TTPieDirection = .Normal
     
+    //make reuseList
     lazy var reusePieLayerGetter : reusePieLayer? = {
         let reusePieLayerGetter : reusePieLayer = { [weak self]
             layerIndex in
@@ -147,10 +152,10 @@ class TTPieView: UIView {
     
     override func layoutSubviews() {
         super.layoutSubviews()
-        if (self.frame.size.width > 0) && !self.didLayoutFirst {
-            self .reloadView()
-            didLayoutFirst = true
+        if !CGSizeEqualToSize(self.oldRect.size, self.frame.size) {
+            self.reloadCurrentPieLayer()
         }
+        self.oldRect = self.frame
     }
     
     func reloadView() -> Void {
@@ -174,13 +179,23 @@ class TTPieView: UIView {
         }
     }
     
+    func reloadCurrentPieLayer() -> Void {
+        if self.reusePiesList.count > 0 {
+            for pieLayer in reusePiesList {
+                (pieLayer.sector! + self)(pieLayer)
+            }
+        }else {
+            self .reloadView()
+        }
+    }
+    
     override func touchesBegan(touches: Set<UITouch>, withEvent event: UIEvent?) {
         super.touchesBegan(touches, withEvent: event)
-        let touchPoint = touches.first?.locationInView(self)
+        guard let touchPoint = touches.first?.locationInView(self) else {return}
         for pieLayer in self.reusePiesList {
             let path = UIBezierPath.init(CGPath: pieLayer.path!)
-            if path.containsPoint(touchPoint!) {
-                self.delegate?.pieView(self, didClickPieLayer: pieLayer)
+            if path.containsPoint(touchPoint) {
+                self.delegate?.pieView(self, didClickPieLayer: pieLayer, atPoint: touchPoint)
                 break
             }
         }
@@ -188,11 +203,11 @@ class TTPieView: UIView {
  
     override func touchesMoved(touches: Set<UITouch>, withEvent event: UIEvent?) {
         super.touchesMoved(touches, withEvent: event)
-         let touchPoint = touches.first?.locationInView(self)
+         guard let touchPoint = touches.first?.locationInView(self) else {return}
         for pieLayer in self.reusePiesList {
             let path = UIBezierPath.init(CGPath: pieLayer.path!)
-            if path.containsPoint(touchPoint!) {
-                self.delegate?.pieView(self, didClickPieLayer: pieLayer)
+            if path.containsPoint(touchPoint) {
+                self.delegate?.pieView(self, didClickPieLayer: pieLayer, atPoint :touchPoint)
             }else {
                 self.delegate?.pieView(self, didUnClickPieLayer: pieLayer)
             }

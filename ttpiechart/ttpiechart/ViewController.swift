@@ -16,14 +16,16 @@ class ViewController: UIViewController  {
         return mainView
     }()
     var pieView : TTPieView?
+
     
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         self.view.layoutIfNeeded()
-        let pieView = TTPieView.init(frame: self.view.frame)
-        pieView.backgroundColor = UIColor.whiteColor()
+        let pieView = TTPieView.init(frame: CGRectMake(20.0, 64.0, (self.view.frame.size.width * 4.0 / 5.0), (self.view.frame.size.height * 4.0 / 5.0)))
+        pieView.center = self.view.center
+        pieView.backgroundColor = UIColor.lightGrayColor()
         pieView.delegate = self
         pieView.dataSource = self
         pieView.startAngle = -M_PI_2
@@ -48,11 +50,19 @@ class ViewController: UIViewController  {
             pieView.reloadView()
         }
     }
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        
+        self.pieView?.frame = CGRectMake(CGRectGetMinX((self.pieView?.frame)!) , CGRectGetMinY((self.pieView?.frame)!), (self.view.frame.size.width * 4.0 / 5.0), (self.view.frame.size.height * 4.0 / 5.0))
+        self.pieView?.center = self.view.center;
+    }
+    
 }
 
 extension ViewController : TTPieViewDataSource, TTPieViewDelegate {
     func numberOfSectorInPieView(pieView: TTPieView) -> Int {
-        return Int(arc4random() % 6) + 1
+        return 6
     }
     
     func randomColor() -> UIColor {
@@ -72,15 +82,15 @@ extension ViewController : TTPieViewDataSource, TTPieViewDelegate {
             [0.8, 1.0]
         ]
         var sector = Sector()
-        sector.minRadius = 60.0
-        sector.maxRadius = 160.0
+        sector.minRadius = 30.0
+        sector.maxRadius = 100.0
         sector.fillColor = self.randomColor()
         sector.startPercent = percentArr[index][0]
         sector.endPercent = percentArr[index][1]
         return sector
     }
     
-    func pieView(pieView: TTPieView, didClickPieLayer layer: TTSectorLayer) {
+    func pieView(pieView: TTPieView, didClickPieLayer layer: TTSectorLayer, atPoint point : CGPoint) {
             layer.setAffineTransform(CGAffineTransformMakeScale(CGFloat(1.2), CGFloat(1.2)))
             layer.fillColor = layer.sector?.fillColor?.brinessColor()(0.3).CGColor
     }

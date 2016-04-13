@@ -14,7 +14,7 @@
 
 ```
 
-+ 响应触摸则需要响应一下两个方法
++ 响应触摸则需要响应以下两个方法
 
 ``` swift
      pieView(_: _, didClickPieLayer _ : _, atPoint _ : _) -> Void

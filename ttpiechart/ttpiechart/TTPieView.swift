@@ -13,7 +13,7 @@ infix operator +  { associativity right precedence 110 }
 
 typealias chartMaker = CALayer -> CALayer?
 typealias reusePieLayer = Int -> CALayer?
-typealias brighterColor = CGFloat -> UIColor
+typealias colorMaker = UIColor -> UIColor?
 
 enum TTPieDirection {
     case Normal
@@ -233,12 +233,13 @@ class TTPieView: UIView {
 
 
 extension UIColor {
-    func brinessColor() -> brighterColor {
-        var hue : CGFloat = 0, saturation : CGFloat = 0, brightness : CGFloat = 0, alpha : CGFloat = 0
-        self.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
-        
-        return { lighterOffset in
-            brightness += lighterOffset
+    func brinessColor(brightnessOffset : CGFloat) -> colorMaker {
+        return { [weak self]
+            color in
+            guard let strongSelf = self else {return nil}
+            var hue : CGFloat = 0, saturation : CGFloat = 0, brightness : CGFloat = 0, alpha : CGFloat = 0
+            strongSelf.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
+            brightness += brightnessOffset
             saturation -= 0.2
            return UIColor.init(hue: hue, saturation: saturation, brightness: brightness, alpha: alpha)
         }

@@ -92,7 +92,9 @@ extension ViewController : TTPieViewDataSource, TTPieViewDelegate {
     
     func pieView(pieView: TTPieView, didClickPieLayer layer: TTSectorLayer, atPoint point : CGPoint) {
             layer.setAffineTransform(CGAffineTransformMakeScale(CGFloat(1.2), CGFloat(1.2)))
-            layer.fillColor = layer.sector?.fillColor?.brinessColor()(0.3).CGColor
+        if let fillColor = layer.sector?.fillColor {
+            layer.fillColor = fillColor.brinessColor(0.2)(fillColor)?.CGColor
+        }
     }
     
     func pieView(pieView: TTPieView, didUnClickPieLayer layer: TTSectorLayer) {

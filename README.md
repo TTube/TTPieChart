@@ -5,7 +5,7 @@
 
 ## UseAge
 
-+ 在dataSource 响应两个方法
++ 如果你需要展示你的饼图，你需要在dataSource 响应两个方法
  
 
 ``` swift

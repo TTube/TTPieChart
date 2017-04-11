@@ -8,16 +8,29 @@
 
 import Foundation
 import UIKit
+// FIXME: comparison operators with optionals were removed from the Swift Standard Libary.
+// Consider refactoring the code to use the non-optional operators.
+fileprivate func < <T : Comparable>(lhs: T?, rhs: T?) -> Bool {
+  switch (lhs, rhs) {
+  case let (l?, r?):
+    return l < r
+  case (nil, _?):
+    return true
+  default:
+    return false
+  }
+}
 
-infix operator +  { associativity right precedence 110 }
 
-typealias chartMaker = CALayer -> CALayer?
-typealias reusePieLayer = Int -> CALayer?
-typealias colorMaker = UIColor -> UIColor?
+//infix operator +  { associativity right precedence 110 }
+
+typealias chartMaker = (CALayer) -> CALayer?
+typealias reusePieLayer = (Int) -> CALayer?
+typealias colorMaker = (UIColor) -> UIColor?
 
 enum TTPieDirection {
-    case Normal
-    case Anti
+    case normal
+    case anti
 }
 
 //一个扇形
@@ -41,41 +54,40 @@ struct Sector {
  */
 private func + (sector : Sector, pieView :TTPieView) -> chartMaker {
     return { layer in
-        guard let pie = layer as? TTSectorLayer
-            where (sector.minRadius < sector.maxRadius || sector.minRadius >= 0 || sector.maxRadius >= 0)
+        guard let pie = layer as? TTSectorLayer, (sector.minRadius < sector.maxRadius || sector.minRadius >= 0 || sector.maxRadius >= 0)
             else { return layer }
         let pieCenter = CGPoint.init(x: pieView.frame.size.width / 2.0 + sector.centerOffset.x, y: pieView.frame.size.height / 2.0 + sector.centerOffset.y)
         let sectorPath = UIBezierPath()
         //Get the sector startAngle and endAngle from sector's startPercent and endPercent
-        let startAngle = pieView.startAngle + (sector.startPercent * M_PI * 2) * (pieView.direction == TTPieDirection.Normal ? 1 : -1);
-        let endAngle = pieView.startAngle + (sector.endPercent * M_PI * 2) * (pieView.direction == TTPieDirection.Normal ? 1 : -1);
+        let startAngle = pieView.startAngle + (sector.startPercent * Double.pi * 2) * (pieView.direction == TTPieDirection.normal ? 1 : -1);
+        let endAngle = pieView.startAngle + (sector.endPercent * Double.pi * 2) * (pieView.direction == TTPieDirection.normal ? 1 : -1);
         //Get startPoint,endPoint to draw the path
         let startInnerPoint = CGPoint.init(x: CGFloat(sector.minRadius * cos(startAngle) + Double(pieCenter.x)), y: CGFloat(sector.minRadius * sin(startAngle) + Double(pieCenter.y)))
         let endOutterPoint = CGPoint.init(x: CGFloat(sector.maxRadius * cos(endAngle) + Double(pieCenter.x)), y: CGFloat(sector.maxRadius * sin(endAngle) + Double(pieCenter.y)))
         
         //Begin to draw the path
         if sector.minRadius > 0 {
-            sectorPath.moveToPoint(startInnerPoint)
-            sectorPath.addArcWithCenter(pieCenter, radius: CGFloat(sector.minRadius), startAngle: CGFloat(startAngle), endAngle: CGFloat(endAngle), clockwise: pieView.direction == .Normal)
-            sectorPath.addLineToPoint(endOutterPoint);
-            sectorPath.addArcWithCenter(pieCenter, radius: CGFloat(sector.maxRadius), startAngle: CGFloat(endAngle), endAngle: CGFloat(startAngle), clockwise: pieView.direction != .Normal)
+            sectorPath.move(to: startInnerPoint)
+            sectorPath.addArc(withCenter: pieCenter, radius: CGFloat(sector.minRadius), startAngle: CGFloat(startAngle), endAngle: CGFloat(endAngle), clockwise: pieView.direction == .normal)
+            sectorPath.addLine(to: endOutterPoint);
+            sectorPath.addArc(withCenter: pieCenter, radius: CGFloat(sector.maxRadius), startAngle: CGFloat(endAngle), endAngle: CGFloat(startAngle), clockwise: pieView.direction != .normal)
             
         }else {
-            sectorPath.moveToPoint(pieCenter)
-            sectorPath.addLineToPoint(endOutterPoint)
-            sectorPath.addArcWithCenter(pieCenter, radius: CGFloat(sector.maxRadius), startAngle: CGFloat(endAngle), endAngle: CGFloat(startAngle), clockwise: pieView.direction != .Normal)
-            sectorPath.addLineToPoint(pieCenter)
+            sectorPath.move(to: pieCenter)
+            sectorPath.addLine(to: endOutterPoint)
+            sectorPath.addArc(withCenter: pieCenter, radius: CGFloat(sector.maxRadius), startAngle: CGFloat(endAngle), endAngle: CGFloat(startAngle), clockwise: pieView.direction != .normal)
+            sectorPath.addLine(to: pieCenter)
         }
         //draw end
-        sectorPath.closePath()
-        pie.path = sectorPath.CGPath
+        sectorPath.close()
+        pie.path = sectorPath.cgPath
         if let fillColor = sector.fillColor {
-            pie.fillColor = fillColor.CGColor
+            pie.fillColor = fillColor.cgColor
         }else {
             pie.fillColor = nil
         }
         if let borderColor = sector.borderColor {
-            pie.strokeColor = borderColor.CGColor
+            pie.strokeColor = borderColor.cgColor
         }else {
             pie.strokeColor =  nil
         }
@@ -90,14 +102,14 @@ private func + (sector : Sector, pieView :TTPieView) -> chartMaker {
 
 
  protocol TTPieViewDataSource : NSObjectProtocol {
-   func numberOfSectorInPieView(pieView : TTPieView) -> Int
-   func pieView(pieView : TTPieView, sectorModelForIndex index : Int) -> Sector
+   func numberOfSectorInPieView(_ pieView : TTPieView) -> Int
+   func pieView(_ pieView : TTPieView, sectorModelForIndex index : Int) -> Sector
 }
 
 protocol TTPieViewDelegate : NSObjectProtocol {
     
-    func pieView(pieView : TTPieView, didClickPieLayer layer : TTSectorLayer, atPoint point : CGPoint) -> Void
-    func pieView(pieView : TTPieView, didUnClickPieLayer layer : TTSectorLayer) -> Void
+    func pieView(_ pieView : TTPieView, didClickPieLayer layer : TTSectorLayer, atPoint point : CGPoint) -> Void
+    func pieView(_ pieView : TTPieView, didUnClickPieLayer layer : TTSectorLayer) -> Void
 }
 
 class TTSectorLayer: CAShapeLayer {
@@ -110,12 +122,12 @@ class TTSectorLayer: CAShapeLayer {
 class TTPieView: UIView {
     weak var dataSource : TTPieViewDataSource?
     weak var delegate : TTPieViewDelegate?
-    private var oldRect = CGRect.zero
+    fileprivate var oldRect = CGRect.zero
     
     var  currentSectorNum : Int = 0
     
     var startAngle = 0.0
-    var direction : TTPieDirection = .Normal
+    var direction : TTPieDirection = .normal
     
     //make reuseList
     lazy var reusePieLayerGetter : reusePieLayer? = {
@@ -128,7 +140,7 @@ class TTPieView: UIView {
                 let cycleNum = Int(layerIndex) + 1 - numberOfReuseList
                 for index in 1...cycleNum {
                     let pieLayer = TTSectorLayer()
-                    pieLayer.contentsScale = UIScreen.mainScreen().scale
+                    pieLayer.contentsScale = UIScreen.main.scale
                     pieLayer.lineWidth = 1.0
                     pieLayer.strokeStart = 0.0
                     pieLayer.strokeEnd = 1.0
@@ -152,7 +164,7 @@ class TTPieView: UIView {
     
     override func layoutSubviews() {
         super.layoutSubviews()
-        if !CGSizeEqualToSize(self.oldRect.size, self.frame.size) {
+        if !self.oldRect.size.equalTo(self.frame.size) {
             self.reloadCurrentPieLayer()
         }
         self.oldRect = self.frame
@@ -189,24 +201,24 @@ class TTPieView: UIView {
         }
     }
     
-    override func touchesBegan(touches: Set<UITouch>, withEvent event: UIEvent?) {
-        super.touchesBegan(touches, withEvent: event)
-        guard let touchPoint = touches.first?.locationInView(self) else {return}
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesBegan(touches, with: event)
+        guard let touchPoint = touches.first?.location(in: self) else {return}
         for pieLayer in self.reusePiesList {
-            let path = UIBezierPath.init(CGPath: pieLayer.path!)
-            if path.containsPoint(touchPoint) {
+            let path = UIBezierPath.init(cgPath: pieLayer.path!)
+            if path.contains(touchPoint) {
                 self.delegate?.pieView(self, didClickPieLayer: pieLayer, atPoint: touchPoint)
                 break
             }
         }
     }
  
-    override func touchesMoved(touches: Set<UITouch>, withEvent event: UIEvent?) {
-        super.touchesMoved(touches, withEvent: event)
-         guard let touchPoint = touches.first?.locationInView(self) else {return}
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesMoved(touches, with: event)
+         guard let touchPoint = touches.first?.location(in: self) else {return}
         for pieLayer in self.reusePiesList {
-            let path = UIBezierPath.init(CGPath: pieLayer.path!)
-            if path.containsPoint(touchPoint) {
+            let path = UIBezierPath.init(cgPath: pieLayer.path!)
+            if path.contains(touchPoint) {
                 self.delegate?.pieView(self, didClickPieLayer: pieLayer, atPoint :touchPoint)
             }else {
                 self.delegate?.pieView(self, didUnClickPieLayer: pieLayer)
@@ -214,15 +226,15 @@ class TTPieView: UIView {
         }
     }
     
-    override func touchesEnded(touches: Set<UITouch>, withEvent event: UIEvent?) {
-        super.touchesEnded(touches, withEvent: event)
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesEnded(touches, with: event)
             for pieLayer in self.reusePiesList {
                 self.delegate?.pieView(self, didUnClickPieLayer: pieLayer)
             }
     }
     
-    override func touchesCancelled(touches: Set<UITouch>?, withEvent event: UIEvent?) {
-        super.touchesCancelled(touches, withEvent: event)
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesCancelled(touches, with: event)
         for pieLayer in self.reusePiesList {
             self.delegate?.pieView(self, didUnClickPieLayer: pieLayer)
         }
@@ -233,7 +245,7 @@ class TTPieView: UIView {
 
 
 extension UIColor {
-    func brinessColor(brightnessOffset : CGFloat) -> colorMaker {
+    func brinessColor(_ brightnessOffset : CGFloat) -> colorMaker {
         return { [weak self]
             color in
             guard let strongSelf = self else {return nil}

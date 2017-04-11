@@ -12,7 +12,7 @@ import UIKit
 class ViewController: UIViewController  {
     lazy var mainView : UITableView  = {
         var mainView : UITableView = UITableView.init()
-        mainView.backgroundColor = UIColor.whiteColor()
+        mainView.backgroundColor = UIColor.white
         return mainView
     }()
     var pieView : TTPieView?
@@ -23,19 +23,19 @@ class ViewController: UIViewController  {
         super.viewDidLoad()
         
         self.view.layoutIfNeeded()
-        let pieView = TTPieView.init(frame: CGRectMake(20.0, 64.0, (self.view.frame.size.width * 4.0 / 5.0), (self.view.frame.size.height * 4.0 / 5.0)))
+        let pieView = TTPieView.init(frame: CGRect(x: 20.0, y: 64.0, width: (self.view.frame.size.width * 4.0 / 5.0), height: (self.view.frame.size.height * 4.0 / 5.0)))
         pieView.center = self.view.center
-        pieView.backgroundColor = UIColor.lightGrayColor()
+        pieView.backgroundColor = UIColor.lightGray
         pieView.delegate = self
         pieView.dataSource = self
-        pieView.startAngle = -M_PI_2
+        pieView.startAngle = -.pi/2
         self.view.addSubview(pieView)
         self.pieView = pieView
         
-        let reloadBtn = UIButton.init(frame: CGRectMake(20.0, 64.0, 100.0, 60.0))
-        reloadBtn.backgroundColor = UIColor.darkGrayColor()
-        reloadBtn.setTitle("reload", forState: .Normal)
-        reloadBtn.addTarget(self, action: Selector("clickReload"), forControlEvents: .TouchUpInside)
+        let reloadBtn = UIButton.init(frame: CGRect(x: 20.0, y: 64.0, width: 100.0, height: 60.0))
+        reloadBtn.backgroundColor = UIColor.darkGray
+        reloadBtn.setTitle("reload", for: UIControlState())
+        reloadBtn.addTarget(self, action: #selector(clickReload), for: .touchUpInside)
         self.view.addSubview(reloadBtn)
         // Do any additional setup after loading the view, typically from a nib.
     }
@@ -54,14 +54,14 @@ class ViewController: UIViewController  {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         
-        self.pieView?.frame = CGRectMake(CGRectGetMinX((self.pieView?.frame)!) , CGRectGetMinY((self.pieView?.frame)!), (self.view.frame.size.width * 4.0 / 5.0), (self.view.frame.size.height * 4.0 / 5.0))
+        self.pieView?.frame = CGRect(x: (self.pieView?.frame)!.minX , y: (self.pieView?.frame)!.minY, width: (self.view.frame.size.width * 4.0 / 5.0), height: (self.view.frame.size.height * 4.0 / 5.0))
         self.pieView?.center = self.view.center;
     }
     
 }
 
 extension ViewController : TTPieViewDataSource, TTPieViewDelegate {
-    func numberOfSectorInPieView(pieView: TTPieView) -> Int {
+    func numberOfSectorInPieView(_ pieView: TTPieView) -> Int {
         return 6
     }
     
@@ -72,7 +72,7 @@ extension ViewController : TTPieViewDataSource, TTPieViewDelegate {
         return UIColor.init(hue: hue, saturation: saturation, brightness: brightness, alpha: 1.0)
     }
     
-    func pieView(pieView: TTPieView, sectorModelForIndex index: Int) -> Sector {
+    func pieView(_ pieView: TTPieView, sectorModelForIndex index: Int) -> Sector {
         let percentArr = [
             [0.0,0.15],
             [0.15,0.3],
@@ -90,16 +90,16 @@ extension ViewController : TTPieViewDataSource, TTPieViewDelegate {
         return sector
     }
     
-    func pieView(pieView: TTPieView, didClickPieLayer layer: TTSectorLayer, atPoint point : CGPoint) {
-            layer.setAffineTransform(CGAffineTransformMakeScale(CGFloat(1.2), CGFloat(1.2)))
+    func pieView(_ pieView: TTPieView, didClickPieLayer layer: TTSectorLayer, atPoint point : CGPoint) {
+            layer.setAffineTransform(CGAffineTransform(scaleX: CGFloat(1.2), y: CGFloat(1.2)))
         if let fillColor = layer.sector?.fillColor {
-            layer.fillColor = fillColor.brinessColor(0.2)(fillColor)?.CGColor
+            layer.fillColor = fillColor.brinessColor(0.2)(fillColor)?.cgColor
         }
     }
     
-    func pieView(pieView: TTPieView, didUnClickPieLayer layer: TTSectorLayer) {
-        layer.setAffineTransform(CGAffineTransformIdentity)
-        layer.fillColor = layer.sector?.fillColor?.CGColor
+    func pieView(_ pieView: TTPieView, didUnClickPieLayer layer: TTSectorLayer) {
+        layer.setAffineTransform(CGAffineTransform.identity)
+        layer.fillColor = layer.sector?.fillColor?.cgColor
     }
     
     
